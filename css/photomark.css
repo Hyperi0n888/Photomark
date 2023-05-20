@@ -1,49 +1,49 @@
 @font-face {
     font-family: 'MiSans';
     font-weight: normal;
-    src: url(./fonts/MiSans-Regular.ttf);
+    src: url(/fonts/MiSans-Regular.ttf);
 }
 
 @font-face {
     font-family: 'MiSans';
     font-weight: bold;
-    src: url(./fonts/MiSans-Demibold.ttf);
+    src: url(/fonts/MiSans-Demibold.ttf);
 }
 
 @font-face {
     font-family: 'HarmonyOS Sans';
     font-weight: normal;
-    src: url(./fonts/HarmonyOS_Sans_Regular.ttf);
+    src: url(/fonts/HarmonyOS_Sans_Regular.ttf);
 }
 
 @font-face {
     font-family: 'HarmonyOS Sans';
     font-weight: bold;
-    src: url(./fonts/HarmonyOS_Sans_Medium.ttf);
+    src: url(/fonts/HarmonyOS_Sans_Medium.ttf);
 }
 
 @font-face {
     font-family: 'OPPOSans';
     font-weight: normal;
-    src: url(./fonts/OPPOSans-R.ttf);
+    src: url(/fonts/OPPOSans-R.ttf);
 }
 
 @font-face {
     font-family: 'OPPOSans';
     font-weight: bold;
-    src: url(./fonts/OPPOSans-M.ttf);
+    src: url(/fonts/OPPOSans-M.ttf);
 }
 
 @font-face {
     font-family: 'SF Pro Display';
     font-weight: normal;
-    src: url(./fonts/SF-Pro-Display-Regular.otf);
+    src: url(/fonts/SF-Pro-Display-Regular.otf);
 }
 
 @font-face {
     font-family: 'SF Pro Display';
     font-weight: bold;
-    src: url(./fonts/SF-Pro-Display-Medium.otf);
+    src: url(/fonts/SF-Pro-Display-Medium.otf);
 }
 
 body {
@@ -78,6 +78,12 @@ h1 {
 
 .preview-dialog .mdui-dialog-content {
     padding: 0;
+}
+
+.mdui-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 @media (min-width: 600px) {

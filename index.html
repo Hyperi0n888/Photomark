@@ -8,18 +8,18 @@
     <meta name="renderer" content="webkit">
     <meta http-equiv="Cache-Control" content="no-siteapp">
     <title>Photomark</title>
-    <link href="https://cdn.staticfile.org/mdui/1.0.2/css/mdui.min.css" rel="stylesheet">
-    <link href="./photomark.css" rel="stylesheet">
-    <script src="https://cdn.staticfile.org/mdui/1.0.2/js/mdui.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js"></script>
-    <script src="./logo.js"></script>
+    <link href="css/mdui.min.css" rel="stylesheet">
+    <link href="css/photomark.css" rel="stylesheet">
+    <script src="js/mdui.min.js"></script>
+    <script src="js/exifr.js"></script>
+    <script src="js/logo.js"></script>
     <script>
         var $ = mdui.$;
         var langLib;
         var langType = window.navigator.language.toLowerCase();
 
         $.ajax({
-            url: `./${langType}.json`,
+            url: `data/${langType}.json`,
             async: false,
             dataType: 'json',
             success: res => {
@@ -55,7 +55,6 @@
     <div class="mdui-container">
         <div id="main-flex" class="mdui-row-xs-1 mdui-row-sm-2">
             <div id="photo-col" class="mdui-col">
-
                 <br />
                 <div id="photo-area" class="mdui-color-grey-200 mdui-ripple mdui-img-rounded mdui-valign"
                     style="height: 256px; background-size: contain; background-repeat: no-repeat; background-position: center;"
@@ -136,30 +135,30 @@
                         <option value="2">2x</option>
                     </select>
                 </div>
-                <div class="mdui-textfield mdui-textfield-floating-label">
+                <div class="mdui-textfield">
                     <label class="mdui-textfield-label">
                         <script>document.write(getI18n('device_name'))</script>
                     </label>
                     <input id="device-input" class="mdui-textfield-input" type="text" onclick="showModelEditor()"
-                        readonly />
+                     />
                 </div>
-                <div class="mdui-textfield mdui-textfield-floating-label">
+                <div class="mdui-textfield">
                     <label class="mdui-textfield-label">
                         <script>document.write(getI18n('time'))</script>
                     </label>
-                    <input id="time-input" class="mdui-textfield-input" type="text" readonly />
+                    <input id="time-input" class="mdui-textfield-input" type="text" onblur="drawImage(true)" />
                 </div>
-                <div class="mdui-textfield mdui-textfield-floating-label">
+                <div class="mdui-textfield">
                     <label class="mdui-textfield-label">
                         <script>document.write(getI18n('lens_info'))</script>
                     </label>
-                    <input id="lens-input" class="mdui-textfield-input" type="text" readonly />
+                    <input id="lens-input" class="mdui-textfield-input" type="text" onblur="drawImage(true)" />
                 </div>
-                <div class="mdui-textfield mdui-textfield-floating-label">
+                <div class="mdui-textfield">
                     <label class="mdui-textfield-label">
                         <script>document.write(getI18n('location'))</script>
                     </label>
-                    <input id="location-input" class="mdui-textfield-input" type="text" readonly />
+                    <input id="location-input" class="mdui-textfield-input" type="text" onblur="drawImage(true)" />
                 </div>
                 <div class="mdui-typo">
                     <a onclick="getLocation()" style="cursor: pointer;">
@@ -178,18 +177,6 @@
                         onclick="drawImage()" disabled>
                         <script>document.write(getI18n('save'))</script>
                     </button>
-                </div>
-                <br /><br /><br /><br />
-                <div class="mdui-typo" style="opacity: .8;">
-                    <p style="margin: 0;">
-                        <script>document.write(getI18n('not_for_commercial_use'))</script>
-                    </p>
-                    <p style="margin: 0;">© LTDSA 2022 | <a onclick="getContributors()" style="cursor: pointer;">
-                            <script>document.write(getI18n('contributors'))</script>
-                        </a> | <a onclick="getFAQ()" style="cursor: pointer;">
-                            <script>document.write(getI18n('faq'))</script>
-                        </a>
-                    </p>
                 </div>
                 <br />
             </div>
@@ -247,7 +234,6 @@
             fileInput.click();
 
             fileInput.onchange = (e) => {
-                console.log(e);
                 if (navigator.userAgent.indexOf('Safari/') > -1) {
                     readImage(e.target.files[0]);
                 } else {
@@ -327,7 +313,7 @@
                     position: 'right-top'
                 });
                 $.ajax({
-                    url: './model.json',
+                    url: 'data/model.json',
                     dataType: 'json',
                     success: res => {
                         if (res[photoExif.Make] && res[photoExif.Make][photoExif.Model]) {
@@ -447,7 +433,7 @@
 
         function readImage(file) {
             photoFile = file;
-            console.log(photoFile);
+
             if (photoFile.type.indexOf('image') == -1) {
                 mdui.snackbar({
                     message: getI18n('please_select_a_image_file'),
@@ -467,25 +453,47 @@
                 photoImage.onload = () => {
                     $('#photo-info').html(`${photoFile.name}<br />${photoImage.width}x${photoImage.height}`);
 
-                    $('#device-input').val('Unknown');
-                    $('#time-input').val('Unknown');
-                    $('#lens-input').val('Unknown');
-                    $('#location-input').val('Unknown');
+                    $('#device-input').val('Sony Xperia 1 IV');
+                    $('#time-input').val(new Date().format('yyyy-MM-dd hh:mm:ss'));
+                    $('#lens-input').val('F 1.4');
+                    $('#location-input').val('地球');
 
-                    exifr.parse(e.target.result).then(res => {
-                        console.log(res);
+                    exifr
+                    .parse(e.target.result)
+                    .then(res => {
                         photoExif = res;
-                        if (res.Model) $('#device-input').val(res.Model);
-                        if (res['39424'] && typeof res['39424'] == 'string') $('#device-input').val(res['39424']); // Xiaomi
-                        if (res.CreateDate) $('#time-input').val(new Date(res.CreateDate).format('yyyy.MM.dd hh:mm:ss'));
-
-                        if (res.FocalLength) $('#lens-input').val(`${parseInt(res.FocalLength)}mm`);
-                        if (res.FocalLengthIn35mmFormat) $('#lens-input').val(`${parseInt(res.FocalLengthIn35mmFormat)}mm`);
-                        if (res.FNumber) $('#lens-input').val(`${$('#lens-input').val()} f/${res.FNumber.toFixed(1)}`);
-                        if (res.ExposureTime) $('#lens-input').val(`${$('#lens-input').val()} 1/${parseInt(res.ExposureTime ** -1)}`);
-                        if (res.ISO) $('#lens-input').val(`${$('#lens-input').val()} ISO${res.ISO}`);
-                        //if (res.FocalLength && res.FNumber && res.ExposureTime && res.ISO) $('#lens-input').val(`${parseInt(res.FocalLength)}mm f/${res.FNumber.toFixed(1)} 1/${parseInt(res.ExposureTime ** -1)} ISO${res.ISO}`);
-                        if (res.GPSLatitude && res.GPSLatitudeRef && res.GPSLongitude && res.GPSLongitudeRef) $('#location-input').val(`${res.GPSLatitude[0]}°${res.GPSLatitude[1]}'${parseInt(res.GPSLatitude[2])}"${res.GPSLatitudeRef} ${res.GPSLongitude[0]}°${res.GPSLongitude[1]}'${parseInt(res.GPSLongitude[2])}"${res.GPSLongitudeRef}`);
+                        if (res != undefined) {
+                            if (res.Model) {
+                                $('#device-input').val(res.Model);
+                            }
+                            if (res['39424'] && typeof res['39424'] == 'string') {
+                                $('#device-input').val(res['39424']); // Xiaomi
+                            }
+                            if (res.CreateDate) {
+                                $('#time-input').val(new Date(res.CreateDate).format('yyyy.MM.dd hh:mm:ss'));
+                            }
+                            if (res.FocalLength) {
+                                $('#lens-input').val(`${parseInt(res.FocalLength)}mm`);
+                            }
+                            if (res.FocalLengthIn35mmFormat) {
+                                $('#lens-input').val(`${parseInt(res.FocalLengthIn35mmFormat)}mm`);
+                            }
+                            if (res.FNumber) {
+                                $('#lens-input').val(`${$('#lens-input').val()} f/${res.FNumber.toFixed(1)}`);
+                            }
+                            if (res.ExposureTime) {
+                                $('#lens-input').val(`${$('#lens-input').val()} 1/${parseInt(res.ExposureTime ** -1)}`);
+                            }
+                            if (res.ISO) {
+                                $('#lens-input').val(`${$('#lens-input').val()} ISO${res.ISO}`);
+                            }
+                            if (res.GPSLatitude
+                                && res.GPSLatitudeRef
+                                && res.GPSLongitude
+                                && res.GPSLongitudeRef) {
+                                    $('#location-input').val(`${res.GPSLatitude[0]}°${res.GPSLatitude[1]}'${parseInt(res.GPSLatitude[2])}"${res.GPSLatitudeRef} ${res.GPSLongitude[0]}°${res.GPSLongitude[1]}'${parseInt(res.GPSLongitude[2])}"${res.GPSLongitudeRef}`);
+                            }
+                        }
 
                         mdui.mutation();
 
@@ -661,8 +669,6 @@
                 $('#photo-area').addClass('mdui-color-grey-200');
             }
 
-            console.log(e);
-
             readImage(e.dataTransfer.files[0]);
         });
 
@@ -674,8 +680,6 @@
         $('#photo-canvas-div').on('drop', function (e) {
             e.preventDefault();
             e.stopPropagation();
-
-            console.log(e);
 
             readImage(e.dataTransfer.files[0]);
         });
