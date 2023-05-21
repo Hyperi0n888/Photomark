@@ -402,24 +402,22 @@
                             })
                 }
             })
-            .then(()=>{
-                // 为了能捕捉preview的加载完成事件，出此下策
-                return new Promise((resolve, reject) => {
-                    let preview = document.getElementById('photo-preview')
-                    photoCanvas.toBlob(canvasBlob => {
-                        if (photoCanvas.height > photoCanvas.width) {
-                            preview.style.width = '60%'
-                            preview.style.height = '100%'
-                        } else {
-                            preview.style.width = '100%'
-                            preview.style.height = '60%'
-                        }
-                        preview.src = URL.createObjectURL(canvasBlob)
-                        preview.onload = resolve
-                        preview.onerror = reject
-                    }, "image/jpeg");
-                })
-            })
+            // 为了能捕捉preview的加载完成事件，出此下策
+            .then(() => new Promise((resolve, reject) => {
+                let preview = document.getElementById('photo-preview')
+                photoCanvas.toBlob(canvasBlob => {
+                    if (photoCanvas.height > photoCanvas.width) {
+                        preview.style.width = '60%'
+                        preview.style.height = '100%'
+                    } else {
+                        preview.style.width = '100%'
+                        preview.style.height = '60%'
+                    }
+                    preview.src = URL.createObjectURL(canvasBlob)
+                    preview.onload = resolve
+                    preview.onerror = reject
+                }, "image/jpeg");
+            }))
             .finally(()=>{
                 $('#photo-loading').hide()
             })
