@@ -476,7 +476,7 @@
                         lens += ` 1/${parseInt(exif.ExposureTime ** -1)}`
                     }
                     if (exif.ISO) {
-                        lens += `ISO${exif.ISO}`
+                        lens += ` ISO${exif.ISO}`
                     }
                     $('#lens-input').val(lens);
                     if (exif.GPSLatitude
