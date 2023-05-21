@@ -416,7 +416,7 @@
                     preview.src = URL.createObjectURL(canvasBlob)
                     preview.onload = resolve
                     preview.onerror = reject
-                }, "image/jpeg");
+                }, "image/jpeg", 1);
             }))
             .finally(()=>{
                 $('#photo-loading').hide()
