@@ -54,8 +54,10 @@
 <body>
     <div class="mdui-container">
         <div id="main-flex" class="mdui-row-xs-1 mdui-row-sm-2">
-            <div id="photo-col" class="mdui-col">
-                <br />
+            <div id="photo-col" class="mdui-col" style="padding: 0px 16px;">
+                <div id="photo-loading" class="mdui-progress">
+                    <div class="mdui-progress-indeterminate"></div>
+                </div>
                 <div id="photo-area" class="mdui-color-grey-200 mdui-ripple mdui-img-rounded mdui-valign"
                     style="height: 256px; background-size: contain; background-repeat: no-repeat; background-position: center;"
                     onclick="chooseFile()">
@@ -146,19 +148,19 @@
                     <label class="mdui-textfield-label">
                         <script>document.write(getI18n('time'))</script>
                     </label>
-                    <input id="time-input" class="mdui-textfield-input" type="text" onblur="drawImage(true)" />
+                    <input id="time-input" class="mdui-textfield-input" type="text" onblur="drawImage()" />
                 </div>
                 <div class="mdui-textfield">
                     <label class="mdui-textfield-label">
                         <script>document.write(getI18n('lens_info'))</script>
                     </label>
-                    <input id="lens-input" class="mdui-textfield-input" type="text" onblur="drawImage(true)" />
+                    <input id="lens-input" class="mdui-textfield-input" type="text" onblur="drawImage()" />
                 </div>
                 <div class="mdui-textfield">
                     <label class="mdui-textfield-label">
                         <script>document.write(getI18n('location'))</script>
                     </label>
-                    <input id="location-input" class="mdui-textfield-input" type="text" onblur="drawImage(true)" />
+                    <input id="location-input" class="mdui-textfield-input" type="text" onblur="drawImage()" />
                 </div>
                 <div class="mdui-typo">
                     <a onclick="getLocation()" style="cursor: pointer;">
@@ -169,12 +171,12 @@
                 </div>
                 <br />
                 <div class="mdui-float-right">
-                    <button id="preview-btn" class="mdui-btn mdui-ripple mdui-hidden" onclick="drawImage(true)"
+                    <button id="preview-btn" class="mdui-btn mdui-ripple mdui-hidden" onclick="drawImage()"
                         disabled>
                         <script>document.write(getI18n('preview'))</script>
                     </button>
-                    <button id="save-btn" class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-pink"
-                        onclick="drawImage()" disabled>
+                    <button id="save-btn" class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-pink mdui-btn-block"
+                        onclick="saveImage()" disabled>
                         <script>document.write(getI18n('save'))</script>
                     </button>
                 </div>
@@ -241,44 +243,59 @@
                 }
             }
         }
-
-        function previewImage() {
-            $.showOverlay();
-            var imageHeight;
-            photoCanvas.toBlob(canvasBlob => {
-                imageHeight = `${document.body.clientWidth * .85 / photoCanvas.width * photoCanvas.height}px`;
-                $.hideOverlay();
-                mdui.dialog({
-                    content: `<img src="${URL.createObjectURL(canvasBlob)}" width="100%" height="${imageHeight}" />`,
-                    cssClass: 'preview-dialog',
-                    buttons: [
-                        {
-                            text: getI18n('cancel')
-                        },
-                        {
-                            text: getI18n('save'),
-                            onClick: () => {
-                                saveImage();
-                            }
-                        }
-                    ]
-                });
-            });
+        
+        /**
+         * 载入图片的Promise实现
+         */
+        function loadImage(src) {
+            return new Promise((resolve, reject) => {
+                const image = new Image()
+                image.src = src
+                image.onload = function(e) {
+                    resolve(e)
+                }
+                image.onerror = function(e) {
+                    reject(e)
+                }
+            })
         }
 
+        /**
+         * 读取文件的Promise实现
+         */
+        function readFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader()
+                reader.onload = resolve
+                reader.onerror = reject
+                reader.readAsDataURL(file)
+            })
+        }
+        
+        /**
+         * 通过获取photo-priview图片的src下载
+         */
         function saveImage() {
             $('#save-btn').text(getI18n('saving'));
             document.querySelector('#save-btn').disabled = true;
-            photoCanvas.toBlob(canvasBlob => {
-                var imageLink = document.createElement('a');
-                imageLink.download = `photomark_${new Date().format('yyyyMMddhhmmss')}.jpg`;
-                imageLink.href = URL.createObjectURL(canvasBlob);
-                imageLink.click();
-                $('#save-btn').text(getI18n('save'));
-                document.querySelector('#save-btn').disabled = false;
-            });
+            
+            const imageLink = document.createElement('a');
+            imageLink.download = `photomark_${new Date().format('yyyyMMddhhmmss')}.jpg`;
+            imageLink.href = $('#photo-preview').attr('src');
+            imageLink.click();
+            $('#save-btn').text(getI18n('save'));
+            document.querySelector('#save-btn').disabled = false;
         }
 
+        function readExif(data) {
+            return exifr.parse(data)
+            .then(exif=>{
+                return exif
+            })
+
+        }
+
+        // 定位函数
         function getLocation() {
             if (navigator.geolocation) {
                 mdui.snackbar({
@@ -286,12 +303,10 @@
                     position: 'right-top'
                 });
                 navigator.geolocation.getCurrentPosition(e => {
-                    console.log(e);
                     const coords = e.coords || {};
                     const { latitude, longitude } = coords;
-                    console.log(latitude, longitude);
                     $('#location-input').val(`${changeToDFM(latitude)}N ${changeToDFM(longitude)}E`);
-                    drawImage(true);
+                    drawImage();
                 }, () => {
                     mdui.snackbar({
                         message: getI18n('cant_get_your_location'),
@@ -318,7 +333,7 @@
                     success: res => {
                         if (res[photoExif.Make] && res[photoExif.Make][photoExif.Model]) {
                             $('#device-input').val(res[photoExif.Make][photoExif.Model]);
-                            drawImage(true);
+                            drawImage();
                         } else {
                             mdui.snackbar({
                                 message: getI18n('model_not_found'),
@@ -341,99 +356,78 @@
             }
         }
 
-        function drawImage(preview) {
-            if (typeof preview == 'undefined') preview = false;
-            var reader = new FileReader();
-            reader.onload = (e) => {
-                var photoImage = new Image();
-                photoImage.src = e.target.result;
-                photoImage.onload = () => {
-                    var photoWidth = photoImage.width;
-                    var photoHeight = photoImage.height;
+        function drawImage() {
+            $('#photo-loading').show()
+            readFile(photoFile)
+            .then(event => loadImage(event.target.result))
+            .then(event=>{
+                let photoImage = event.target;
+                var photoWidth = photoImage.width;
+                var photoHeight = photoImage.height;
 
-                    if (parseInt($('#zoom-select').val()) == 2) {
-                        photoWidth = photoWidth * 2;
-                        photoHeight = photoHeight * 2;
-                    }
-
-                    photoCanvas.width = photoWidth;
-                    photoCanvas.height = photoHeight + 614;
-
-                    photoCtx.fillStyle = 'white';
-                    photoCtx.fillRect(0, 0, photoCanvas.width, photoCanvas.height);
-                    photoCtx.drawImage(photoImage, 0, 0, photoWidth, photoHeight);
-
-                    photoCtx.font = `bold 120px ${fontList[parseInt($('#font-select').val())]}`;
-                    photoCtx.fillStyle = 'black';
-
-                    var specLength = photoCtx.measureText($('#lens-input').val()).width;
-
-                    photoCtx.fillText($('#device-input').val(), 200, photoHeight + 282);
-                    //photoCtx.fillText($('#lens-input').val(), photoImage.width - 1820, photoImage.height + 282);
-                    photoCtx.fillText($('#lens-input').val(), photoWidth - specLength - 200, photoHeight + 282);
-
-
-                    photoCtx.font = `normal 82px ${fontList[parseInt($('#font-select').val())]}`;
-                    photoCanvas.style.letterSpacing = '1px';
-                    photoCtx.fillStyle = '#727272';
-                    photoCtx.fillText($('#time-input').val(), 200, photoHeight + 434);
-                    photoCtx.fillText($('#location-input').val(), photoWidth - specLength - 200, photoHeight + 434);
-
-                    if ($('#logo-select').val() != 'none') {
-                        var logoImage = new Image();
-                        logoImage.src = logoList[$('#logo-select').val()];
-
-                        logoImage.onload = () => {
-                            photoCtx.drawImage(logoImage, photoWidth - specLength - 600, photoHeight + 190, 250, 250);
-
-                            photoCtx.moveTo(photoWidth - specLength - 280, photoHeight + 190);
-                            photoCtx.lineTo(photoWidth - specLength - 280, photoHeight + 440);
-                            photoCtx.lineWidth = 10;
-                            photoCtx.strokeStyle = '#cccccc';
-                            photoCtx.stroke();
-
-                            if (preview) {
-                                //previewImage();
-                                photoCanvas.toBlob(canvasBlob => {
-                                    if (photoCanvas.height > photoCanvas.width) {
-                                        $('#photo-preview').attr('width', '60%');
-                                        $('#photo-preview').attr('height', '100%');
-                                    } else {
-                                        $('#photo-preview').attr('width', '100%');
-                                        $('#photo-preview').attr('height', '60%');
-                                    }
-                                    $('#photo-preview').attr('src', URL.createObjectURL(canvasBlob));
-                                });
-                            } else {
-                                saveImage();
-                            }
-                        }
-                    } else {
-                        if (preview) {
-                            //previewImage();
-                            photoCanvas.toBlob(canvasBlob => {
-                                if (photoCanvas.height > photoCanvas.width) {
-                                    $('#photo-preview').attr('width', '60%');
-                                    $('#photo-preview').attr('height', '100%');
-                                } else {
-                                    $('#photo-preview').attr('width', '100%');
-                                    $('#photo-preview').attr('height', '60%');
-                                }
-                                $('#photo-preview').attr('src', URL.createObjectURL(canvasBlob));
-                            });
-                        } else {
-                            saveImage();
-                        }
-                    }
+                if (parseInt($('#zoom-select').val()) == 2) {
+                    photoWidth = photoWidth * 2;
+                    photoHeight = photoHeight * 2;
                 }
-            };
 
-            reader.readAsDataURL(photoFile);
+                photoCanvas.width = photoWidth;
+                photoCanvas.height = photoHeight + 614;
+
+                photoCtx.fillStyle = 'white';
+                photoCtx.fillRect(0, 0, photoCanvas.width, photoCanvas.height);
+                photoCtx.drawImage(photoImage, 0, 0, photoWidth, photoHeight);
+
+                photoCtx.font = `bold 120px ${fontList[parseInt($('#font-select').val())]}`;
+                photoCtx.fillStyle = 'black';
+
+                var specLength = photoCtx.measureText($('#lens-input').val()).width;
+
+                photoCtx.fillText($('#device-input').val(), 200, photoHeight + 282);
+                photoCtx.fillText($('#lens-input').val(), photoWidth - specLength - 200, photoHeight + 282);
+                photoCtx.font = `normal 82px ${fontList[parseInt($('#font-select').val())]}`;
+                photoCanvas.style.letterSpacing = '1px';
+                photoCtx.fillStyle = '#727272';
+                photoCtx.fillText($('#time-input').val(), 200, photoHeight + 434);
+                photoCtx.fillText($('#location-input').val(), photoWidth - specLength - 200, photoHeight + 434);
+                if ($('#logo-select').val() != 'none') {
+                    let logo = logoList[$('#logo-select').val()]
+                    return loadImage(logo)
+                            .then(e => {
+                                photoCtx.drawImage(e.target, photoWidth - specLength - 600, photoHeight + 190, 250, 250);
+                                photoCtx.moveTo(photoWidth - specLength - 280, photoHeight + 190);
+                                photoCtx.lineTo(photoWidth - specLength - 280, photoHeight + 440);
+                                photoCtx.lineWidth = 10;
+                                photoCtx.strokeStyle = '#cccccc';
+                                photoCtx.stroke();
+                            })
+                }
+            })
+            .then(()=>{
+                // 为了能捕捉preview的加载完成事件，出此下策
+                return new Promise((resolve, reject) => {
+                    let preview = document.getElementById('photo-preview')
+                    photoCanvas.toBlob(canvasBlob => {
+                        if (photoCanvas.height > photoCanvas.width) {
+                            preview.style.width = '60%'
+                            preview.style.height = '100%'
+                        } else {
+                            preview.style.width = '100%'
+                            preview.style.height = '60%'
+                        }
+                        preview.src = URL.createObjectURL(canvasBlob)
+                        preview.onload = resolve
+                        preview.onerror = reject
+                    }, "image/jpg");
+                })
+            })
+            .finally(()=>{
+                $('#photo-loading').hide()
+            })
+
         }
 
         function readImage(file) {
             photoFile = file;
-
             if (photoFile.type.indexOf('image') == -1) {
                 mdui.snackbar({
                     message: getI18n('please_select_a_image_file'),
@@ -441,77 +435,71 @@
                 });
                 return;
             }
-
             $('#photo-tip').addClass('mdui-hidden');
             $('#photo-info').text(getI18n('loading'));
             $('#photo-info').removeClass('mdui-hidden');
+            readFile(file)
+            .then(e => loadImage(e.target.result))
+            .then(e => {
+                let photoImage = e.target
+                $('#photo-info').html(`${file.name}<br />${photoImage.width}x${photoImage.height}`);
 
-            var reader = new FileReader();
-            reader.onload = (e) => {
-                var photoImage = new Image();
-                photoImage.src = e.target.result;
-                photoImage.onload = () => {
-                    $('#photo-info').html(`${photoFile.name}<br />${photoImage.width}x${photoImage.height}`);
-
-                    $('#device-input').val('Sony Xperia 1 IV');
-                    $('#time-input').val(new Date().format('yyyy-MM-dd hh:mm:ss'));
-                    $('#lens-input').val('F 1.4');
-                    $('#location-input').val('地球');
-
-                    exifr
-                    .parse(e.target.result)
-                    .then(res => {
-                        photoExif = res;
-                        if (res != undefined) {
-                            if (res.Model) {
-                                $('#device-input').val(res.Model);
-                            }
-                            if (res['39424'] && typeof res['39424'] == 'string') {
-                                $('#device-input').val(res['39424']); // Xiaomi
-                            }
-                            if (res.CreateDate) {
-                                $('#time-input').val(new Date(res.CreateDate).format('yyyy.MM.dd hh:mm:ss'));
-                            }
-                            if (res.FocalLength) {
-                                $('#lens-input').val(`${parseInt(res.FocalLength)}mm`);
-                            }
-                            if (res.FocalLengthIn35mmFormat) {
-                                $('#lens-input').val(`${parseInt(res.FocalLengthIn35mmFormat)}mm`);
-                            }
-                            if (res.FNumber) {
-                                $('#lens-input').val(`${$('#lens-input').val()} f/${res.FNumber.toFixed(1)}`);
-                            }
-                            if (res.ExposureTime) {
-                                $('#lens-input').val(`${$('#lens-input').val()} 1/${parseInt(res.ExposureTime ** -1)}`);
-                            }
-                            if (res.ISO) {
-                                $('#lens-input').val(`${$('#lens-input').val()} ISO${res.ISO}`);
-                            }
-                            if (res.GPSLatitude
-                                && res.GPSLatitudeRef
-                                && res.GPSLongitude
-                                && res.GPSLongitudeRef) {
-                                    $('#location-input').val(`${res.GPSLatitude[0]}°${res.GPSLatitude[1]}'${parseInt(res.GPSLatitude[2])}"${res.GPSLatitudeRef} ${res.GPSLongitude[0]}°${res.GPSLongitude[1]}'${parseInt(res.GPSLongitude[2])}"${res.GPSLongitudeRef}`);
-                            }
-                        }
-
-                        mdui.mutation();
-
-                        $('#photo-area').addClass('mdui-hidden');
-                        $('#photo-canvas-div').removeClass('mdui-hidden');
-                        drawImage(true);
-                    });
-
-                    if (navigator.userAgent.indexOf('Mobile') > -1 && navigator.userAgent.indexOf('Safari/') > -1 && photoFile.size > 1024 ** 2 * 5) {
-                        mdui.snackbar({
-                            message: getI18n('this_image_cannot_be_saved_in_safari'),
-                            position: 'right-top'
-                        });
+                $('#device-input').val('Sony Xperia 1 IV');
+                $('#time-input').val(new Date().format('yyyy-MM-dd hh:mm:ss'));
+                $('#lens-input').val('F 1.4');
+                $('#location-input').val('地球');
+                return readExif(photoImage.src)
+            })
+            .then(exif => {
+                photoExif = exif
+                if (exif != undefined) {
+                    let lens = ""
+                    if (exif.Model) {
+                        $('#device-input').val(exif.Model);
+                    }
+                    if (exif['39424'] && typeof exif['39424'] == 'string') {
+                        $('#device-input').val(exif['39424']); // Xiaomi
+                    }
+                    if (exif.CreateDate) {
+                        $('#time-input').val(new Date(exif.CreateDate).format('yyyy.MM.dd hh:mm:ss'));
+                    }
+                    if (exif.FocalLength) {
+                        lens = `${exif.FocalLength}mm`
+                    }
+                    if (exif.FocalLengthIn35mmFormat) {
+                        lens = `${exif.FocalLengthIn35mmFormat}mm`
+                    }
+                    if (exif.FNumber) {
+                        lens += ` f/${exif.FNumber.toFixed(1)}`
+                    }
+                    if (exif.ExposureTime) {
+                        lens += ` 1/${parseInt(exif.ExposureTime ** -1)}`
+                    }
+                    if (exif.ISO) {
+                        lens += `ISO${exif.ISO}`
+                    }
+                    $('#lens-input').val(lens);
+                    if (exif.GPSLatitude
+                        && exif.GPSLatitudeRef
+                        && exif.GPSLongitude
+                        && exif.GPSLongitudeRef) {
+                            $('#location-input').val(`${exif.GPSLatitude[0]}°${exif.GPSLatitude[1]}'${parseInt(exif.GPSLatitude[2])}"${exif.GPSLatitudeRef} ${exif.GPSLongitude[0]}°${exif.GPSLongitude[1]}'${parseInt(exif.GPSLongitude[2])}"${exif.GPSLongitudeRef}`);
                     }
                 }
-            }
+                mdui.mutation();
 
-            reader.readAsDataURL(photoFile);
+                $('#photo-area').addClass('mdui-hidden');
+                $('#photo-canvas-div').removeClass('mdui-hidden');
+                if (navigator.userAgent.indexOf('Mobile') > -1
+                && navigator.userAgent.indexOf('Safari/') > -1
+                && photoFile.size > 5 * 2<<20) {
+                    mdui.snackbar({
+                        message: getI18n('this_image_cannot_be_saved_in_safari'),
+                        position: 'right-top'
+                    });
+                }
+                drawImage();
+            })
 
             document.querySelector('#save-btn').disabled = false;
             document.querySelector('#preview-btn').disabled = false;
@@ -532,11 +520,12 @@
                             text: getI18n('ok'),
                             close: false,
                             onClick: () => {
-                                if ($('#editor-make').val() != '' && $('#editor-model').val() != '') {
+                                if ($('#editor-make').val() != ''
+                                && $('#editor-model').val() != '') {
                                     photoExif.Make = $('#editor-make').val();
                                     photoExif.Model = $('#editor-model').val();
                                     $('#device-input').val(photoExif.Model);
-                                    drawImage(true);
+                                    drawImage();
                                     history.back();
                                 } else {
                                     mdui.snackbar({
@@ -554,72 +543,6 @@
                     position: 'right-top'
                 });
             }
-        }
-
-        function getFAQ() {
-            var faqContent;
-            $.ajax({
-                url: `./faq_${langType}.html`,
-                async: false,
-                success: res => {
-                    faqContent = res;
-                },
-                error: () => {
-                    $.ajax({
-                        url: './faq_en-us.html',
-                        async: false,
-                        success: res => {
-                            faqContent = res;
-                        }
-                    });
-                    mdui.snackbar({
-                        message: getI18n('failed_to_load_faq_content'),
-                        position: 'right-top'
-                    });
-                }
-            });
-
-            mdui.dialog({
-                title: getI18n('faq'),
-                content: faqContent,
-                buttons: [
-                    {
-                        text: getI18n('ok')
-                    }
-                ]
-            });
-        }
-
-        function getContributors() {
-            $.showOverlay();
-            $.ajax({
-                url: 'https://api.github.com/repos/LTDSA/Photomark/contributors',
-                dataType: 'json',
-                complete: () => {
-                    $.hideOverlay();
-                },
-                success: res => {
-                    var listLayout = '';
-                    res.forEach(i => {
-                        listLayout += `<div class="mdui-list-item"><div class="mdui-list-item-avatar"><img src="${i.avatar_url}"/></div><div class="mdui-list-item-content"><div class="mdui-list-item-title">${i.login}</div><div class="mdui-list-item-text">${i.contributions} ${getI18n('contributions')}</div></div></div>`
-                    });
-                    mdui.dialog({
-                        title: getI18n('contributors'),
-                        content: `<div class="mdui-list">${listLayout}</div>`,
-                        buttons: [
-                            {
-                                text: getI18n('ok')
-                            }
-                        ]
-                    });
-                },
-                error: () => {
-                    mdui.snackbar({
-                        message: 'Cannot load contributors',
-                        position: 'right-top'
-                    });
-                }
-            });
         }
 
         if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -708,16 +631,18 @@
                 position: 'right-top'
             });
 
-            drawImage(true);
+            drawImage();
         });
 
         $('#logo-select').on('change', () => {
-            drawImage(true);
+            drawImage();
         });
 
         $('#zoom-select').on('change', () => {
-            drawImage(true);
+            drawImage();
         });
+
+        $('#photo-loading').hide()
     </script>
 </body>
 
