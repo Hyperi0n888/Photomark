@@ -54,7 +54,7 @@
 <body>
     <div class="mdui-container">
         <div id="main-flex" class="mdui-row-xs-1 mdui-row-sm-2">
-            <div id="photo-col" class="mdui-col" style="padding: 0px 16px;">
+            <div id="photo-col" class="mdui-col" style="padding: 0px 16px; box-sizing: border-box;">
                 <div id="photo-loading" class="mdui-progress">
                     <div class="mdui-progress-indeterminate"></div>
                 </div>
@@ -148,19 +148,19 @@
                     <label class="mdui-textfield-label">
                         <script>document.write(getI18n('time'))</script>
                     </label>
-                    <input id="time-input" class="mdui-textfield-input" type="text" onblur="drawImage()" />
+                    <input id="time-input" class="mdui-textfield-input" type="text" />
                 </div>
                 <div class="mdui-textfield">
                     <label class="mdui-textfield-label">
                         <script>document.write(getI18n('lens_info'))</script>
                     </label>
-                    <input id="lens-input" class="mdui-textfield-input" type="text" onblur="drawImage()" />
+                    <input id="lens-input" class="mdui-textfield-input" type="text" />
                 </div>
                 <div class="mdui-textfield">
                     <label class="mdui-textfield-label">
                         <script>document.write(getI18n('location'))</script>
                     </label>
-                    <input id="location-input" class="mdui-textfield-input" type="text" onblur="drawImage()" />
+                    <input id="location-input" class="mdui-textfield-input" type="text" />
                 </div>
                 <div class="mdui-typo">
                     <a onclick="getLocation()" style="cursor: pointer;">
@@ -171,10 +171,11 @@
                 </div>
                 <br />
                 <div class="mdui-float-right">
-                    <button id="preview-btn" class="mdui-btn mdui-ripple mdui-hidden" onclick="drawImage()"
+                    <button id="preview-btn" class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-red mdui-btn-block" onclick="drawImage()"
                         disabled>
                         <script>document.write(getI18n('preview'))</script>
                     </button>
+                    <br>
                     <button id="save-btn" class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-pink mdui-btn-block"
                         onclick="saveImage()" disabled>
                         <script>document.write(getI18n('save'))</script>
@@ -392,14 +393,14 @@
                 if ($('#logo-select').val() != 'none') {
                     let logo = logoList[$('#logo-select').val()]
                     return loadImage(logo)
-                            .then(e => {
-                                photoCtx.drawImage(e.target, photoWidth - specLength - 600, photoHeight + 190, 250, 250);
-                                photoCtx.moveTo(photoWidth - specLength - 280, photoHeight + 190);
-                                photoCtx.lineTo(photoWidth - specLength - 280, photoHeight + 440);
-                                photoCtx.lineWidth = 10;
-                                photoCtx.strokeStyle = '#cccccc';
-                                photoCtx.stroke();
-                            })
+                        .then(e => {
+                            photoCtx.drawImage(e.target, photoWidth - specLength - 600, photoHeight + 190, 250, 250);
+                            photoCtx.moveTo(photoWidth - specLength - 280, photoHeight + 190);
+                            photoCtx.lineTo(photoWidth - specLength - 280, photoHeight + 440);
+                            photoCtx.lineWidth = 10;
+                            photoCtx.strokeStyle = '#cccccc';
+                            photoCtx.stroke();
+                        })
                 }
             })
             // 为了能捕捉preview的加载完成事件，出此下策
@@ -628,17 +629,16 @@
                 message: getI18n('changing_font_please_wait'),
                 position: 'right-top'
             });
-
-            drawImage();
+            
         });
 
-        $('#logo-select').on('change', () => {
-            drawImage();
-        });
+        // $('#logo-select').on('change', () => {
+        //     drawImage();
+        // });
 
-        $('#zoom-select').on('change', () => {
-            drawImage();
-        });
+        // $('#zoom-select').on('change', () => {
+        //     drawImage();
+        // });
 
         $('#photo-loading').hide()
     </script>

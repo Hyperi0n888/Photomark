@@ -122,7 +122,8 @@ h1 {
     }
 
     #photo-canvas-div {
-        max-width: calc(100% - 32px);
+        max-width: 100%;
+        /* max-width: calc(100% - 32px); */
     }
 
     #info-col {
